@@ -217,12 +217,9 @@ It supports all the options LWP supports, including authentication.
 
 =head1 COPYRIGHT
 
-This program is licensed under the...
+Copyright 2014, Geoff Franks
 
-	Loose Lips License
-
-The full text of the license can be found in the
-LICENSE file included with this module.
+This library is licensed under the GNU General Public License 3.0
 
 =head1 METHODS
 
