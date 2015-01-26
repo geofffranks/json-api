@@ -4,7 +4,7 @@ use Module::Build;
 
 my $builder = Module::Build->new(
 	module_name         => 'JSON::API',
-	license             => 'glp3',
+	license             => 'gpl_3',
 	dist_author         => q{Geoff Franks <geoff.franks@gmail.com>},
 	dist_version_from   => 'lib/JSON/API.pm',
 
