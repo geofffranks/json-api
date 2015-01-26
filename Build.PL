@@ -7,6 +7,11 @@ my $builder = Module::Build->new(
 	license             => 'gpl_3',
 	dist_author         => q{Geoff Franks <geoff.franks@gmail.com>},
 	dist_version_from   => 'lib/JSON/API.pm',
+	meta_merge => {
+		resources => {
+			repository => 'https://github.com/dwimperl/Task-DWIM',
+		},
+	},
 
 	configure_requires => {
 		'Module::Build' => '0.38',

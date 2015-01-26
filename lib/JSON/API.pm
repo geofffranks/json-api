@@ -7,7 +7,7 @@ use Data::Dumper;
 BEGIN {
     use Exporter ();
     use vars qw($VERSION @ISA @EXPORT @EXPORT_OK %EXPORT_TAGS);
-    $VERSION     = '1.0.3';
+    $VERSION     = '1.0.4';
     @ISA         = qw(Exporter);
     #Give a hoot don't pollute, do not export more than needed by default
     @EXPORT      = qw();
@@ -189,6 +189,8 @@ sub was_success
 	return $self->{has_error} ? 0 : 1;
 }
 
+1;
+
 =head1 NAME
 
 JSON::API - Module to interact with a JSON API
@@ -210,16 +212,6 @@ This module wraps JSON and LWP::UserAgent to create a flexible utility
 for accessing APIs that accept/provide JSON data.
 
 It supports all the options LWP supports, including authentication.
-
-=head1 AUTHOR
-
-    Geoff Franks <geoff.franks@gmail.com>
-
-=head1 COPYRIGHT
-
-Copyright 2014, Geoff Franks
-
-This library is licensed under the GNU General Public License 3.0
 
 =head1 METHODS
 
@@ -325,4 +317,17 @@ Returns the complete URL of a request, when given a path.
 
 =cut
 
-1;
+=head1 REPOSITORY
+
+L<https://github.com/geofffranks/json-api>
+
+=head1 AUTHOR
+
+    Geoff Franks <geoff.franks@gmail.com>
+
+=head1 COPYRIGHT
+
+Copyright 2014, Geoff Franks
+
+This library is licensed under the GNU General Public License 3.0
+
