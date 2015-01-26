@@ -37,3 +37,6 @@ MYMETA.*
 *.bak
 nytprof.out
 pm_to_blib
+
+JSON-API-*
+JSON-API-*/
