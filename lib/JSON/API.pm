@@ -5,14 +5,14 @@ use JSON;
 use Data::Dumper;
 
 BEGIN {
-    use Exporter ();
-    use vars qw($VERSION @ISA @EXPORT @EXPORT_OK %EXPORT_TAGS);
-    $VERSION     = '1.0.4';
-    @ISA         = qw(Exporter);
-    #Give a hoot don't pollute, do not export more than needed by default
-    @EXPORT      = qw();
-    @EXPORT_OK   = qw();
-    %EXPORT_TAGS = ();
+	use Exporter ();
+	use vars qw($VERSION @ISA @EXPORT @EXPORT_OK %EXPORT_TAGS);
+	$VERSION     = '1.0.5';
+	@ISA         = qw(Exporter);
+	#Give a hoot don't pollute, do not export more than needed by default
+	@EXPORT      = qw();
+	@EXPORT_OK   = qw();
+	%EXPORT_TAGS = ();
 }
 
 sub _debug
