@@ -11,6 +11,19 @@ my $builder = Module::Build->new(
 	configure_requires => {
 		'Module::Build' => '0.38',
 	},
+	requires => {
+		'JSON'           => 0,
+		'LWP::UserAgent' => 0,
+	},
+	build_requires => {
+		'JSON' => 0,
+		'Test::Fake::HTTPD'   => 0,
+		'IO::Capture'         => 0,
+		'LWP::UserAgent'      => 0,
+		'Test::More'          => 0,
+		'Test::Pod::Coverage' => 0,
+
+	},
 
 	add_to_cleanup => [
 		'JSON-API-*',
