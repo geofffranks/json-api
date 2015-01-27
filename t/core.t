@@ -35,8 +35,8 @@ use JSON::API;
 	my $json = 'blahblah{"';
 	my $api = JSON::API->new('test');
 	is_deeply($api->_decode($json), undef, 'Bad JSON returns undef on decode');
-	is($api->errstr,
-		'malformed JSON string, neither array, object, number, string or atom, at character offset 0 (before "blahblah{"")',
+	like($api->errstr,
+		qr/^malformed JSON string, neither /,
 		'Bad JSON sets proper errstr'
 	);
 }
