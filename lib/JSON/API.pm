@@ -323,7 +323,7 @@ L<https://github.com/geofffranks/json-api>
 
 =head1 AUTHOR
 
-    Geoff Franks <geoff.franks@gmail.com>
+    Geoff Franks <gfranks@cpan.org>
 
 =head1 COPYRIGHT
 
