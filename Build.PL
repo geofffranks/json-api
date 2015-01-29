@@ -19,6 +19,7 @@ my $builder = Module::Build->new(
 	requires => {
 		'JSON'           => 0,
 		'LWP::UserAgent' => 0,
+		'URI::Encode'    => 0,
 	},
 	build_requires => {
 		'JSON' => 0,

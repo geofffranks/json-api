@@ -1,5 +1,8 @@
 Revision history for Perl module JSON::API
 
+1.0.7 Wed Jan 28 23:23:23 2015
+    - Added query parameter support for get()
+
 1.0.6 Mon Jan 26 19:45:00 2015
     - Fixed testing issues on other versions of JSON
 

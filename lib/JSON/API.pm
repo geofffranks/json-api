@@ -3,11 +3,12 @@ use strict;
 use LWP::UserAgent;
 use JSON;
 use Data::Dumper;
+use URI::Encode qw/uri_encode/;
 
 BEGIN {
 	use Exporter ();
 	use vars qw($VERSION @ISA @EXPORT @EXPORT_OK %EXPORT_TAGS);
-	$VERSION     = '1.0.6';
+	$VERSION     = '1.0.7';
 	@ISA         = qw(Exporter);
 	#Give a hoot don't pollute, do not export more than needed by default
 	@EXPORT      = qw();
@@ -144,7 +145,11 @@ sub new
 
 sub get
 {
-	my ($self, $path) = @_;
+	my ($self, $path, $data) = @_;
+	if ($data) {
+		my @qp = map { "$_=".uri_encode($data->{$_}, { encode_reserved => 1 }) } sort keys %$data;
+		$path .= "?".join("&", @qp);
+	}
 	$self->_http_req("GET", $path);
 }
 
@@ -270,11 +275,12 @@ JSON data. If no data is returned, returns an empty hashref.
 =head2 get
 
 Performs an HTTP GET on the given B<path>. B<path> will be appended to the
-B<base_url> provided when creating this object.
+B<base_url> provided when creating this object. If given a B<data> object,
+this will be turned into querystring parameters, with URI encoded values.
 
   my $obj = $api->get('/objects/1');
-
-See get|post|put|del for details.
+  # Automatically add + encode querystring params
+  my $obj = $api->get('/objects/1', { param => 'value' });
 
 =head2 put
 
@@ -283,8 +289,6 @@ B<get>, this will append path to the end of the B<base_url>.
 
   $api->put('/objects/', $obj);
 
-See get|post|put|del for details.
-
 =head2 post
 
 Performs an HTTP POST on the given B<path>, with the provided B<data>. Like
@@ -292,16 +296,12 @@ B<get>, this will append path to the end of the B<base_url>.
 
   $api->post('/objects/', [$obj1, $obj2]);
 
-See get|post|put|del for details.
-
 =head2 del
 
 Performs an HTTP DELETE on the given B<path>. Like B<get>, this will append
 path to the end of the B<base_url>.
 
   $api->del('/objects/first');
-
-See get|post|put|del for details.
 
 =head2 errstr
 
