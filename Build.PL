@@ -9,7 +9,9 @@ my $builder = Module::Build->new(
 	dist_version_from   => 'lib/JSON/API.pm',
 	meta_merge => {
 		resources => {
-			repository => 'https://github.com/dwimperl/Task-DWIM',
+			homepage   => 'https://github.com/geofffranks/json-api',
+			bugtracker => 'https://github.com/geofffranks/json-api/issues',
+			repository => 'git://github.com/geofffranks/json-api.git',
 		},
 	},
 
