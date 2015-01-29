@@ -5,7 +5,7 @@ Priority: optional
 Build-Depends: libjson-perl, debhelper (>= 8), libtest-fake-httpd-perl, libio-capture-perl, libwww-perl, libtest-pod-coverage-perl, perl, perl-modules
 Standards-Version: 3.9.3
 
-Depends: perl, libjson-perl, libwww-perl
+Depends: perl, libjson-perl, liburi-encode-perl, libwww-perl
 Description: Module to interact with a JSON API
 Package: libjson-api-perl
 Architecture: all

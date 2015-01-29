@@ -9,7 +9,7 @@ Summary: Module to interact with a JSON API
 Source: %{_dist}.tar.gz
 BuildArch: noarch
 BuildRequires: perl(JSON), perl-libwww-perl, perl(Test::Pod::Coverage), perl(Test::Fake::HTTPD), perl(IO::Capture), perl(Module::Build)
-Requires: perl(JSON), perl-libwww-perl
+Requires: perl(JSON), perl-libwww-perl, perl(URI::Encode)
 
 %description
 JSON::API abstracts interactions with a remote API into simple methods for requesting
