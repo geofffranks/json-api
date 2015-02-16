@@ -1,5 +1,8 @@
 Revision history for Perl module JSON::API
 
+1.0.8 Mon Feb 16 14:26:00 2015
+    - Fixed Build.PL's license attribute, allowing META.* file creation
+
 1.0.7 Wed Jan 28 23:23:23 2015
     - Added query parameter support for get()
 

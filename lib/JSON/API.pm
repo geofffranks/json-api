@@ -8,7 +8,7 @@ use URI::Encode qw/uri_encode/;
 BEGIN {
 	use Exporter ();
 	use vars qw($VERSION @ISA @EXPORT @EXPORT_OK %EXPORT_TAGS);
-	$VERSION     = '1.0.7';
+	$VERSION     = '1.0.8';
 	@ISA         = qw(Exporter);
 	#Give a hoot don't pollute, do not export more than needed by default
 	@EXPORT      = qw();
