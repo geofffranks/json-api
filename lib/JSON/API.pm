@@ -1,5 +1,6 @@
 package JSON::API;
 use strict;
+use HTTP::Status qw/:constants/;
 use LWP::UserAgent;
 use JSON;
 use Data::Dumper;
@@ -8,7 +9,7 @@ use URI::Encode qw/uri_encode/;
 BEGIN {
 	use Exporter ();
 	use vars qw($VERSION @ISA @EXPORT @EXPORT_OK %EXPORT_TAGS);
-	$VERSION     = '1.0.9';
+	$VERSION     = '1.1.0';
 	@ISA         = qw(Exporter);
 	#Give a hoot don't pollute, do not export more than needed by default
 	@EXPORT      = qw();
@@ -34,17 +35,20 @@ sub _server
 
 sub _http_req
 {
-	my ($self, $method, $path, $data) = @_;
-	$self->_debug('_http_req called with the following:',Dumper($method,$path,$data));
+	my ($self, $method, $path, $data, $apphdr) = @_;
+	$self->_debug('_http_req called with the following:',Dumper($method,$path,$data, $apphdr));
 
 	my $url = $self->url($path);
 	$self->_debug("URL calculated to be: $url");
+        delete $self->{response};
 
 	my $headers = HTTP::Headers->new(
 			'Accept'       => 'application/json',
 			'Content-Type' => 'application/json',
 	);
-
+        if( $apphdr && ref $apphdr ) {
+            $headers->header( $_, $apphdr->{$_} ) foreach (keys %$apphdr);
+        }
 	my $json;
 	if (defined $data) {
 		$json = $self->_encode($data);
@@ -56,11 +60,16 @@ sub _http_req
 	my $res = $self->{user_agent}->request($req);
 
 	$self->_debug("Response: ",Dumper($res));
+        $self->{response} = $res;
 	if ($res->is_success) {
 		$self->{has_error}    = 0;
 		$self->{error_string} = '';
 		$self->_debug("Successful request detected");
-	} else {
+        } elsif ($res->code == HTTP_NOT_MODIFIED) {
+            return wantarray ?
+                             ($res->code, {}) :
+                             {};
+        } else {
 		$self->{has_error} = 1;
 		$self->{error_string} = $res->content;
 		$self->_debug("Error detected: ".$self->{error_string});
@@ -145,30 +154,30 @@ sub new
 
 sub get
 {
-	my ($self, $path, $data) = @_;
+	my ($self, $path, $data, $apphdr) = @_;
 	if ($data) {
 		my @qp = map { "$_=".uri_encode($data->{$_}, { encode_reserved => 1 }) } sort keys %$data;
 		$path .= "?".join("&", @qp);
 	}
-	$self->_http_req("GET", $path);
+	$self->_http_req("GET", $path, undef, $apphdr);
 }
 
 sub put
 {
-	my ($self, $path, $data) = @_;
-	$self->_http_req("PUT", $path, $data);
+	my ($self, $path, $data, $apphdr) = @_;
+	$self->_http_req("PUT", $path, $data, $apphdr);
 }
 
 sub post
 {
-	my ($self, $path, $data) = @_;
-	$self->_http_req("POST", $path, $data);
+	my ($self, $path, $data, $apphdr) = @_;
+	$self->_http_req("POST", $path, $data, $apphdr);
 }
 
 sub del
 {
-	my ($self, $path) = @_;
-	$self->_http_req("DELETE", $path);
+	my ($self, $path, $apphdr) = @_;
+	$self->_http_req("DELETE", $path, undef, $apphdr);
 }
 
 sub url
@@ -180,6 +189,25 @@ sub url
 	# (e.g. http://example.com//api//mypath/ becomes http://example.com/api/mypath/
 	$url =~ s|(?<!:)/+|/|g;
 	return $url;
+}
+
+sub response
+{
+    my ($self) = @_;
+
+    return $self->{response};
+}
+
+sub header
+{
+    my ($self, $name) = @_;
+
+    return unless( $self->{response} );
+
+    unless( $name ) {
+        return $self->{response}->header_field_names;
+    }
+    return $self->{response}->header( $name );
 }
 
 sub errstr
@@ -264,6 +292,11 @@ take the B<path> to the API endpoint as the first parameter. The B<put()> and
 B<post()> methods also accept a second B<data> parameter, which should be a reference
 to be serialized into JSON for POST/PUTing to the endpoint.
 
+All methods also accept an optional B<apphdr> parameter in the last position, which
+is a hashref.  The referenced hash contains header names and values that will be
+submitted with the request.  See HTTP::Headers.  This can be used to provide
+B<If-Modified> or other headers required by the API.
+
 If called in scalar context, returns the deserialized JSON content returned by
 the server. If no content was returned, returns an empty hashref. To check for errors,
 call B<errstr> or B<was_success>.
@@ -302,6 +335,18 @@ Performs an HTTP DELETE on the given B<path>. Like B<get>, this will append
 path to the end of the B<base_url>.
 
   $api->del('/objects/first');
+
+=head2 response
+
+Returns the last C<HTTP::Response>, or undef if none or if the last request
+didn't generate one. This can be used to obtain detailed status.
+
+=head2 header
+
+With no argument, C<header> returns a list of the header fields in the last response.
+If a field name is specified, returns the value(s) of the named field.  A multi-valued
+field will be returned comma-separated in scalar context, or as separate values in
+list context.  See C<HTTP::Header>.
 
 =head2 errstr
 
