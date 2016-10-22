@@ -224,6 +224,8 @@ sub was_success
 
 1;
 
+__END__
+
 =head1 NAME
 
 JSON::API - Module to interact with a JSON API
@@ -348,6 +350,10 @@ If a field name is specified, returns the value(s) of the named field.  A multi-
 field will be returned comma-separated in scalar context, or as separate values in
 list context.  See C<HTTP::Header>.
 
+This snippet can be used to dump all the response headers:
+
+ print "$_ => ", scalar $api->header($_), "\n" foreach ($api->header);
+
 =head2 errstr
 
 Returns the current error string for the last call.
@@ -360,7 +366,42 @@ Returns whether or not the last request was successful.
 
 Returns the complete URL of a request, when given a path.
 
-=cut
+=head1 EXAMPLES
+
+This is a more advanced example of accessing the GitHub API.  It uses a custom
+request header and conditional GET requests for efficiency.  It falls-back to
+unconditional GET when necessary.
+
+This code uses constants and methods from C<IO::SOCKET::SSL> and C<Storable>.
+Error handling and logging have been omitted for clarity.
+
+  my $repo = eval { lock_retrieve( "repo.status" ) };
+  my $api = JSON::API->new( 'https://api.github.com/repos/user/app',
+                            agent => "$prog/$VERSION",
+                            protocols_allowed => [ qw/https/ ],
+                            env_proxy => 1,
+                            ssl_opts => { verify_hostname => $vhost || 0,
+                                          SSL_verify_mode => ( $vhost?
+                                                               SSL_VERIFY_PEER :
+                                                               SSL_VERIFY_NONE ) },
+                          );
+  my($rc, $tags) = ( $repo && $repo->{tags_etag} )?
+      $api->get( '/tags', undef, { Accept => 'application/vnd.github.v3+json',
+                                   If_None_Match => $repo->{tags_etag}, } ) :
+      $api->get( '/tags', undef, { Accept => 'application/vnd.github.v3+json' } );
+  unless( ref $tags && $api->was_success ) {
+      exit( 1 );
+  }
+  if( $api->can( 'header' ) ) {
+      if( $rc == HTTP_NOT_MODIFIED ) {
+          $tags = $repo->{tags};
+      } else {
+          $repo ||= {};
+          $repo->{tags_etag} = $api->header( 'ETag' );
+          $repo->{tags} = $tags;
+          eval { lock_store( $repo, 'repo.status' ) };
+      }
+  }
 
 =head1 REPOSITORY
 
@@ -376,3 +417,4 @@ Copyright 2014, Geoff Franks
 
 This library is licensed under the GNU General Public License 3.0
 
+=cut
