@@ -1,5 +1,11 @@
 Revision history for Perl module JSON::API
 
+1.1.0 Sun Oct 23 11:36:00 2016
+    - Added support for customizing and retrieving reqest/response headers
+    - Added support for accessing the raw HTTP response object after issuing
+      a request
+    - Converted to licensing to the Perl license itself
+
 1.0.8 Mon Feb 16 14:26:00 2015
     - Fixed Build.PL's license attribute, allowing META.* file creation
 
