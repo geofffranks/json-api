@@ -75,6 +75,12 @@ METHODS
 
          $api->del('/objects/first');
 
+   response
+        Returns the HTTP::Response object for the last response
+
+   header
+        Returns the list of header names or the value(s) of a specific header in the last response.
+
    errstr
        Returns the current error string for the last call.
 

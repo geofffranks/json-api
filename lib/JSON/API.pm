@@ -1,5 +1,6 @@
 package JSON::API;
 use strict;
+use HTTP::Status qw/:constants/;
 use LWP::UserAgent;
 use JSON;
 use Data::Dumper;
@@ -8,7 +9,7 @@ use URI::Encode qw/uri_encode/;
 BEGIN {
 	use Exporter ();
 	use vars qw($VERSION @ISA @EXPORT @EXPORT_OK %EXPORT_TAGS);
-	$VERSION     = '1.0.9';
+	$VERSION     = v1.1.0;
 	@ISA         = qw(Exporter);
 	#Give a hoot don't pollute, do not export more than needed by default
 	@EXPORT      = qw();
@@ -34,17 +35,20 @@ sub _server
 
 sub _http_req
 {
-	my ($self, $method, $path, $data) = @_;
-	$self->_debug('_http_req called with the following:',Dumper($method,$path,$data));
+	my ($self, $method, $path, $data, $apphdr) = @_;
+	$self->_debug('_http_req called with the following:',Dumper($method,$path,$data, $apphdr));
 
 	my $url = $self->url($path);
 	$self->_debug("URL calculated to be: $url");
+        delete $self->{response};
 
 	my $headers = HTTP::Headers->new(
 			'Accept'       => 'application/json',
 			'Content-Type' => 'application/json',
 	);
-
+        if( $apphdr && ref $apphdr ) {
+            $headers->header( $_, $apphdr->{$_} ) foreach (keys %$apphdr);
+        }
 	my $json;
 	if (defined $data) {
 		$json = $self->_encode($data);
@@ -56,11 +60,16 @@ sub _http_req
 	my $res = $self->{user_agent}->request($req);
 
 	$self->_debug("Response: ",Dumper($res));
+        $self->{response} = $res;
 	if ($res->is_success) {
 		$self->{has_error}    = 0;
 		$self->{error_string} = '';
 		$self->_debug("Successful request detected");
-	} else {
+        } elsif ($res->code == HTTP_NOT_MODIFIED) {
+            return wantarray ?
+                             ($res->code, {}) :
+                             {};
+        } else {
 		$self->{has_error} = 1;
 		$self->{error_string} = $res->content;
 		$self->_debug("Error detected: ".$self->{error_string});
@@ -145,30 +154,30 @@ sub new
 
 sub get
 {
-	my ($self, $path, $data) = @_;
+	my ($self, $path, $data, $apphdr) = @_;
 	if ($data) {
 		my @qp = map { "$_=".uri_encode($data->{$_}, { encode_reserved => 1 }) } sort keys %$data;
 		$path .= "?".join("&", @qp);
 	}
-	$self->_http_req("GET", $path);
+	$self->_http_req("GET", $path, undef, $apphdr);
 }
 
 sub put
 {
-	my ($self, $path, $data) = @_;
-	$self->_http_req("PUT", $path, $data);
+	my ($self, $path, $data, $apphdr) = @_;
+	$self->_http_req("PUT", $path, $data, $apphdr);
 }
 
 sub post
 {
-	my ($self, $path, $data) = @_;
-	$self->_http_req("POST", $path, $data);
+	my ($self, $path, $data, $apphdr) = @_;
+	$self->_http_req("POST", $path, $data, $apphdr);
 }
 
 sub del
 {
-	my ($self, $path) = @_;
-	$self->_http_req("DELETE", $path);
+	my ($self, $path, $apphdr) = @_;
+	$self->_http_req("DELETE", $path, undef, $apphdr);
 }
 
 sub url
@@ -180,6 +189,25 @@ sub url
 	# (e.g. http://example.com//api//mypath/ becomes http://example.com/api/mypath/
 	$url =~ s|(?<!:)/+|/|g;
 	return $url;
+}
+
+sub response
+{
+    my ($self) = @_;
+
+    return $self->{response};
+}
+
+sub header
+{
+    my ($self, $name) = @_;
+
+    return unless( $self->{response} );
+
+    unless( $name ) {
+        return $self->{response}->header_field_names;
+    }
+    return $self->{response}->header( $name );
 }
 
 sub errstr
@@ -195,6 +223,8 @@ sub was_success
 }
 
 1;
+
+__END__
 
 =head1 NAME
 
@@ -264,6 +294,11 @@ take the B<path> to the API endpoint as the first parameter. The B<put()> and
 B<post()> methods also accept a second B<data> parameter, which should be a reference
 to be serialized into JSON for POST/PUTing to the endpoint.
 
+All methods also accept an optional B<apphdr> parameter in the last position, which
+is a hashref.  The referenced hash contains header names and values that will be
+submitted with the request.  See HTTP::Headers.  This can be used to provide
+B<If-Modified> or other headers required by the API.
+
 If called in scalar context, returns the deserialized JSON content returned by
 the server. If no content was returned, returns an empty hashref. To check for errors,
 call B<errstr> or B<was_success>.
@@ -303,6 +338,22 @@ path to the end of the B<base_url>.
 
   $api->del('/objects/first');
 
+=head2 response
+
+Returns the last C<HTTP::Response>, or undef if none or if the last request
+didn't generate one. This can be used to obtain detailed status.
+
+=head2 header
+
+With no argument, C<header> returns a list of the header fields in the last response.
+If a field name is specified, returns the value(s) of the named field.  A multi-valued
+field will be returned comma-separated in scalar context, or as separate values in
+list context.  See C<HTTP::Header>.
+
+This snippet can be used to dump all the response headers:
+
+ print "$_ => ", scalar $api->header($_), "\n" foreach ($api->header);
+
 =head2 errstr
 
 Returns the current error string for the last call.
@@ -315,7 +366,42 @@ Returns whether or not the last request was successful.
 
 Returns the complete URL of a request, when given a path.
 
-=cut
+=head1 EXAMPLES
+
+This is a more advanced example of accessing the GitHub API.  It uses a custom
+request header and conditional GET requests for efficiency.  It falls-back to
+unconditional GET when necessary.
+
+This code uses constants and methods from C<IO::SOCKET::SSL> and C<Storable>.
+Error handling and logging have been omitted for clarity.
+
+  my $repo = eval { lock_retrieve( "repo.status" ) };
+  my $api = JSON::API->new( 'https://api.github.com/repos/user/app',
+                            agent => "$prog/$VERSION",
+                            protocols_allowed => [ qw/https/ ],
+                            env_proxy => 1,
+                            ssl_opts => { verify_hostname => $vhost || 0,
+                                          SSL_verify_mode => ( $vhost?
+                                                               SSL_VERIFY_PEER :
+                                                               SSL_VERIFY_NONE ) },
+                          );
+  my($rc, $tags) = ( $repo && $repo->{tags_etag} )?
+      $api->get( '/tags', undef, { Accept => 'application/vnd.github.v3+json',
+                                   If_None_Match => $repo->{tags_etag}, } ) :
+      $api->get( '/tags', undef, { Accept => 'application/vnd.github.v3+json' } );
+  unless( ref $tags && $api->was_success ) {
+      exit( 1 );
+  }
+  if( $api->can( 'header' ) ) {
+      if( $rc == HTTP_NOT_MODIFIED ) {
+          $tags = $repo->{tags};
+      } else {
+          $repo ||= {};
+          $repo->{tags_etag} = $api->header( 'ETag' );
+          $repo->{tags} = $tags;
+          eval { lock_store( $repo, 'repo.status' ) };
+      }
+  }
 
 =head1 REPOSITORY
 
@@ -331,3 +417,4 @@ Copyright 2014, Geoff Franks
 
 This library is licensed under the GNU General Public License 3.0
 
+=cut
