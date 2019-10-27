@@ -17,6 +17,13 @@ BEGIN {
 	%EXPORT_TAGS = ();
 }
 
+# not an object metohd
+# build JSON object for encode/decode, disallow nonref
+# to match previous non object usage, APIs should be returning
+# JSON arrays or JSON objects
+sub _build_json {
+	JSON->new->allow_nonref(0);
+}
 sub _debug
 {
 	my ($self, @lines) = @_;
@@ -92,7 +99,8 @@ sub _encode
 
 	my $json = undef;
 	eval {
-		$json = to_json($obj);
+		$self->{_json} ||= _build_json();
+		$json = $self->{_json}->encode($obj);
 		$self->_debug("JSON created: $json");
 	} or do {
 		if ($@) {
@@ -114,7 +122,8 @@ sub _decode
 	eval {
 		$json = $self->{predecodehook}->($json)
 			 if defined($self->{predecodehook});
-		$obj = from_json($json);
+		$self->{_json} ||= _build_json();
+		$obj = $self->{_json}->decode($json);
 		$self->_debug("Deserializing successful:",Dumper($obj));
 	} or do {
 		if ($@) {
