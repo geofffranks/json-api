@@ -174,6 +174,12 @@ sub get
 	$self->_http_req("GET", $path, undef, $apphdr);
 }
 
+sub patch
+{
+	my ($self, $path, $data, $apphdr) = @_;
+	$self->_http_req("PATCH", $path, $data, $apphdr);
+}
+
 sub put
 {
 	my ($self, $path, $data, $apphdr) = @_;
@@ -307,12 +313,12 @@ being decoded.
 
 =back
 
-=head2 get|post|put|del
+=head2 get|post|patch|put|del
 
-Perform an HTTP action (GET|POST|PUT|DELETE) against the given API. All methods
-take the B<path> to the API endpoint as the first parameter. The B<put()> and
+Perform an HTTP action (GET|POST|PATCH|PUT|DELETE) against the given API. All methods
+take the B<path> to the API endpoint as the first parameter. The B<patch()>, B<put()> and
 B<post()> methods also accept a second B<data> parameter, which should be a reference
-to be serialized into JSON for POST/PUTing to the endpoint.
+to be serialized into JSON for POST/PATCH/PUTing to the endpoint.
 
 All methods also accept an optional B<apphdr> parameter in the last position, which
 is a hashref.  The referenced hash contains header names and values that will be
@@ -336,6 +342,13 @@ this will be turned into querystring parameters, with URI encoded values.
   my $obj = $api->get('/objects/1');
   # Automatically add + encode querystring params
   my $obj = $api->get('/objects/1', { param => 'value' });
+
+=head2 patch
+
+Performs an HTTP PATCH on the given B<path>, with the provided B<data>. Like
+B<get>, this will append path to the end of the B<base_url>.
+
+  $api->patch('/objects/', $obj);
 
 =head2 put
 
