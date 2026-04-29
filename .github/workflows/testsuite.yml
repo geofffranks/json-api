@@ -78,7 +78,9 @@ jobs:
       - uses: actions/checkout@v4
       - run: perl -V
       - name: install dependencies
-        uses: perl-actions/install-with-cpm@v1.8
+        # cpanm rather than cpm here: cpm's bootstrap script needs Perl
+        # >= 5.24 and would refuse to run on the older matrix entries.
+        uses: perl-actions/install-with-cpanm@v1
         with:
           # perldocker container runs as root and ships no sudo binary
           sudo: false
