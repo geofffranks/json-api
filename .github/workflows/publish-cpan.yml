@@ -1,0 +1,46 @@
+name: Publish to CPAN
+
+on:
+  release:
+    types: [created]
+
+jobs:
+  publish-ui:
+    name: Publish to CPAN
+    runs-on: ubuntu-latest
+    environment: Release
+    steps:
+      - uses: actions/checkout@v4
+      - name: update-version
+        # Tag is expected as vX.Y.Z so the v-string $VERSION = vX.Y.Z; stays valid.
+        run: |
+          sed -i -E "s/^([[:space:]]*)\\\$VERSION[[:space:]]*=[[:space:]]*v[0-9.]+;/\\1\\\$VERSION = ${GITHUB_REF_NAME};/" lib/JSON/API.pm
+      - name: install cpanm and multiple modules
+        uses: perl-actions/install-with-cpanm@v1
+        with:
+          install: |
+            Module::Build
+            Software::License
+            JSON
+            LWP::UserAgent
+            URI::Encode
+            Test::Fake::HTTPD
+            IO::Capture
+            Test::More
+            Test::Pod::Coverage
+            CPAN::Uploader
+      - name: Configure
+        run: perl Build.PL
+      - name: Test
+        run: ./Build test
+      - name: Build
+        run: ./Build
+      - name: Build Manifest
+        run: ./Build manifest
+      - name: Deliver locally
+        run: ./Build dist
+      - name: Upload to CPAN
+        env:
+          CPAN_USERNAME: ${{ secrets.USERNAME }}
+          CPAN_PASSWORD: ${{ secrets.PASSWORD }}
+        run: cpan-upload -u "$CPAN_USERNAME" -p "$CPAN_PASSWORD" JSON-API-*.tar.gz
