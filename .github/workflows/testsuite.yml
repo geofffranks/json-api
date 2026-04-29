@@ -77,6 +77,18 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - run: perl -V
+      - name: install dependencies
+        uses: perl-actions/install-with-cpm@v1.8
+        with:
+          install: |
+            Module::Build
+            JSON
+            LWP::UserAgent
+            URI::Encode
+            Test::Fake::HTTPD
+            IO::Capture
+            Test::More
+            Test::Pod::Coverage
       - run: perl Build.PL
       - run: ./Build
       - run: ./Build test

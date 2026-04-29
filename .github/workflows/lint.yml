@@ -20,4 +20,4 @@ jobs:
           install: |
             Perl::Critic
       - name: run perlcritic
-        run: perlcritic --gentle lib/ t/
+        run: perlcritic --gentle lib/

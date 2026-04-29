@@ -82,7 +82,7 @@ use JSON::API;
 
 { # Issue #3: _encode strips Perl's "<FH> line/chunk N" suffix from errstr
 	# Perl appends ", <FH> line N" (or "chunk N") when <> was active
-	package JSON::API::Test::EncodeFH;
+	package JSON::API::Test::EncodeFH; ## no critic (Modules::RequireFilenameMatchesPackage)
 	sub encode { die "boom at -e line 1, <STDIN> line 1.\n" }
 	package main;
 
@@ -94,7 +94,7 @@ use JSON::API;
 }
 
 { # Issue #3: _encode strips multi-line carp trace from errstr
-	package JSON::API::Test::EncodeCarp;
+	package JSON::API::Test::EncodeCarp; ## no critic (Modules::RequireFilenameMatchesPackage)
 	sub encode { die "boom at -e line 1.\n\teval {...} called at -e line 1\n" }
 	package main;
 
@@ -106,7 +106,7 @@ use JSON::API;
 }
 
 { # Issue #3: _decode strips Perl's "<FH> line/chunk N" suffix from errstr
-	package JSON::API::Test::DecodeFH;
+	package JSON::API::Test::DecodeFH; ## no critic (Modules::RequireFilenameMatchesPackage)
 	sub decode { die "boom at -e line 1, <STDIN> line 1.\n" }
 	package main;
 
@@ -118,7 +118,7 @@ use JSON::API;
 }
 
 { # Issue #3: _decode strips multi-line carp trace from errstr
-	package JSON::API::Test::DecodeCarp;
+	package JSON::API::Test::DecodeCarp; ## no critic (Modules::RequireFilenameMatchesPackage)
 	sub decode { die "boom at -e line 1.\n\teval {...} called at -e line 1\n" }
 	package main;
 

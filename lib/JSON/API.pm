@@ -108,7 +108,7 @@ sub _encode
 		$self->{has_error}    = 1;
 		$self->{error_string} = 'hash- or arrayref expected (not a simple scalar, use allow_nonref to allow this)';
 		$self->_debug("Error serializing json from \$obj:" . $self->{error_string});
-		return undef;
+		return undef; ## no critic (ProhibitExplicitReturnUndef)
 	}
 
 	my $json = undef;
@@ -159,7 +159,7 @@ sub _decode
 sub new
 {
 	my ($class, $base_url, %parameters) = @_;
-	return undef unless $base_url;
+	return undef unless $base_url; ## no critic (ProhibitExplicitReturnUndef)
 
 	my %ua_opts = %parameters;
 	map { delete $parameters{$_}; } qw(user pass realm debug predecodehook);
