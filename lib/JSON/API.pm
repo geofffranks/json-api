@@ -22,7 +22,10 @@ BEGIN {
 # to match previous non object usage, APIs should be returning
 # JSON arrays or JSON objects
 sub _build_json {
-	JSON->new->allow_nonref(0);
+	# utf8: encode/decode operates on byte strings. HTTP::Request requires
+	# bytes; without this, non-ASCII payloads carry the utf8 flag and trip
+	# "HTTP::Message content must be bytes".
+	JSON->new->utf8->allow_nonref(0);
 }
 sub _debug
 {
@@ -106,7 +109,10 @@ sub _encode
 		if ($@) {
 			$self->{has_error} = 1;
 			$self->{error_string} = $@;
-			$self->{error_string} =~ s/\s+at\s+\S+\s+line\s+\d+\.?\s*//;
+			# Strip Perl's "at FILE line N" location, optional ", <FH> line/chunk N"
+			# suffix Perl appends when <> was active, and any multi-line carp
+			# stack trace that follows. /s lets .* span newlines.
+			$self->{error_string} =~ s/\s+at\s+\S+\s+line\s+\d+(?:,\s+\S+\s+(?:line|chunk)\s+\d+)?\..*\z//s;
 			$self->_debug("Error serializing json from \$obj:" . $self->{error_string});
 		}
 	};
@@ -129,7 +135,10 @@ sub _decode
 		if ($@) {
 			$self->{has_error} = 1;
 			$self->{error_string} = $@;
-			$self->{error_string} =~ s/\s+at\s+\S+\s+line\s+\d+\.?\s*//;
+			# Strip Perl's "at FILE line N" location, optional ", <FH> line/chunk N"
+			# suffix Perl appends when <> was active, and any multi-line carp
+			# stack trace that follows. /s lets .* span newlines.
+			$self->{error_string} =~ s/\s+at\s+\S+\s+line\s+\d+(?:,\s+\S+\s+(?:line|chunk)\s+\d+)?\..*\z//s;
 			$self->_debug("Error deserializing: ".$self->{error_string});
 		}
 	};
