@@ -80,6 +80,8 @@ jobs:
       - name: install dependencies
         uses: perl-actions/install-with-cpm@v1.8
         with:
+          # perldocker container runs as root and ships no sudo binary
+          sudo: false
           install: |
             Module::Build
             JSON
