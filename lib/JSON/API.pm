@@ -100,6 +100,17 @@ sub _encode
 {
 	my ($self, $obj) = @_;
 
+	# Validate input ourselves rather than relying on JSON backend's
+	# allow_nonref(0). Modern JSON::PP/JSON::XS default allow_nonref to
+	# true and may ignore allow_nonref(0); error message text also varies
+	# across backends. Guarantee consistent behavior + errstr here.
+	unless (ref($obj) eq 'HASH' || ref($obj) eq 'ARRAY') {
+		$self->{has_error}    = 1;
+		$self->{error_string} = 'hash- or arrayref expected (not a simple scalar, use allow_nonref to allow this)';
+		$self->_debug("Error serializing json from \$obj:" . $self->{error_string});
+		return undef;
+	}
+
 	my $json = undef;
 	eval {
 		$self->{_json} ||= _build_json();
