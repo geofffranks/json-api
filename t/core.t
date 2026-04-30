@@ -49,6 +49,14 @@ use JSON::API;
 	is($api->_encode($obj), '{"name":"foo"}', 'Valid object gets serialized to JSON');
 }
 
+{ # arrayref also accepted by _encode
+	my $arr = [ { name => 'foo' }, { name => 'bar' } ];
+	my $api = JSON::API->new('test');
+	is($api->_encode($arr),
+		'[{"name":"foo"},{"name":"bar"}]',
+		'arrayref serializes to JSON array');
+}
+
 { # test json serializing with invalid obj
 	my $obj = 'asdf';
 	my $api = JSON::API->new('test');
@@ -188,6 +196,63 @@ use JSON::API;
 
 	$api->{has_error} = 1;
 	is($api->was_success, 0, "presence of has_error = fail");
+}
+
+{ # predecodehook: strips CSRF-prefix garbage before JSON decode
+	my $api = JSON::API->new('test',
+		predecodehook => sub {
+			my $j = shift;
+			$j =~ s/^\)\]\}',?\n//;
+			$j;
+		});
+	my $payload = ")]}',\n" . '{"name":"foo"}';
+	is_deeply($api->_decode($payload), { name => 'foo' },
+		'predecodehook runs before decode and produces a parseable payload');
+}
+
+{ # client-warning: Internal response short-circuits decode
+	package JSON::API::Test::InternalWarnUA; ## no critic (Modules::RequireFilenameMatchesPackage)
+	sub new { bless {}, shift }
+	sub request {
+		require HTTP::Response;
+		return HTTP::Response->new(500, 'failed',
+			[ 'client-warning' => 'Internal response' ],
+			'connect: Connection refused');
+	}
+	sub credentials { }
+	package main;
+
+	my $api = JSON::API->new('http://unreachable.invalid/');
+	$api->{user_agent} = JSON::API::Test::InternalWarnUA->new;
+	my ($code, $body) = $api->get('/x');
+	is($code, 500,
+		'client-warning Internal response surfaces upstream code');
+	is_deeply($body, {},
+		'client-warning Internal response returns empty hashref + skips decode');
+	ok(!$api->was_success,
+		'client-warning Internal response leaves has_error set');
+
+	my $scalar = $api->get('/x');
+	is_deeply($scalar, {},
+		'client-warning Internal response returns empty hashref in scalar context');
+}
+
+{ # header() / response() are safe to call before any request
+	my $api = JSON::API->new('http://x.example/');
+	is($api->response, undef,
+		'response() returns undef when no request has been made');
+	is($api->header('ETag'), undef,
+		'header($name) returns undef when no response is cached');
+	is_deeply([ $api->header ], [],
+		'header() with no arg returns empty list when no response is cached');
+}
+
+{ # new() called as instance method blesses into the same class
+	my $a = JSON::API->new('http://a.example/');
+	my $b = $a->new('http://b.example/');
+	isa_ok($b, 'JSON::API', 'instance->new() returns blessed JSON::API');
+	is($b->url('x'), 'http://b.example/x',
+		'instance->new() uses the new base_url, not the parent');
 }
 
 done_testing;

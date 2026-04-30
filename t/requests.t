@@ -83,6 +83,33 @@ my $httpd = run_http_server {
 				[ '' ]
 			]
 		} # }}}
+		elsif ($path =~ m{^/apphdr-echo}) { # {{{
+			my $val = $request->header('X-Custom');
+			[
+				200,
+				[ 'Content-Type' => 'application/json' ],
+				[ '{"echoed":"' . (defined $val ? $val : '') . '"}' ],
+			]
+		} # }}}
+		elsif ($path eq '/conditional') { # {{{
+			my $inm = $request->header('If-None-Match');
+			if (defined $inm && $inm eq '"abc"') {
+				[
+					304,
+					[ 'ETag' => '"abc"' ],
+					[ '' ],
+				]
+			} else {
+				[
+					200,
+					[
+						'Content-Type' => 'application/json',
+						'ETag'         => '"abc"',
+					],
+					[ '{"data":"first"}' ],
+				]
+			}
+		} # }}}
 		elsif ($path eq '/auth-test') { # {{{
 			if (!$request->header('Authorization')) {
 				[
@@ -163,6 +190,29 @@ call_api($api, "GET", '/get_404', undef,
 	'get(/get_404) returns page not found');
 
 is_deeply($api->errstr, '{"error":"My Custom Page Not Found Message"}', "get('/get_404') returned an errrstr");
+
+{ # apphdr: custom request header passes through to the server
+	my ($code, $body) = $api->get('/apphdr-echo', undef, { 'X-Custom' => 'hello' });
+	is($code, 200, 'apphdr GET returned 200');
+	is($body->{echoed}, 'hello', 'apphdr custom header reached the server');
+}
+
+{ # response() / header(): exposed last HTTP::Response and its headers
+	$api->get('/conditional');
+	isa_ok($api->response, 'HTTP::Response', 'response() returns HTTP::Response');
+	is($api->header('ETag'), '"abc"', 'header($name) returns named header value');
+	my @names = $api->header;
+	ok(scalar(grep { lc $_ eq 'etag' } @names),
+		'header() with no arg lists header field names');
+}
+
+{ # 304 Not Modified short-circuits with empty body
+	my ($code, $body) = $api->get('/conditional', undef, { 'If-None-Match' => '"abc"' });
+	is($code, 304, '/conditional with matching If-None-Match returns 304');
+	is_deeply($body, {}, '304 returns empty hashref in list context');
+	my $scalar = $api->get('/conditional', undef, { 'If-None-Match' => '"abc"' });
+	is_deeply($scalar, {}, '304 returns empty hashref in scalar context');
+}
 
 call_api($api, "GET", '/auth-test', undef,
 	{ error => 'authentication required'}, 401,
