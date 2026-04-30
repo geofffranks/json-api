@@ -21,10 +21,10 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - run: perl -V
       - name: install dependencies
-        uses: perl-actions/install-with-cpm@v1.8
+        uses: perl-actions/install-with-cpm@v2
         with:
           install: |
             Module::Build
@@ -75,12 +75,12 @@ jobs:
       image: perldocker/perl-tester:${{ matrix.perl-version }}
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - run: perl -V
       - name: install dependencies
         # cpanm rather than cpm here: cpm's bootstrap script needs Perl
         # >= 5.24 and would refuse to run on the older matrix entries.
-        uses: perl-actions/install-with-cpanm@v1
+        uses: perl-actions/install-with-cpanm@v2
         with:
           # perldocker container runs as root and ships no sudo binary
           sudo: false
