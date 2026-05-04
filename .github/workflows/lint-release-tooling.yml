@@ -1,0 +1,47 @@
+name: lint-release-tooling
+
+on:
+  push:
+    branches:
+      - '*'
+    tags-ignore:
+      - '*'
+  pull_request:
+
+jobs:
+  actionlint:
+    name: actionlint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - name: Run actionlint
+        uses: raven-actions/actionlint@v2
+        with:
+          files: ".github/workflows/*.yml"
+
+  shellcheck:
+    name: shellcheck
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - name: Install shellcheck
+        run: sudo apt-get update && sudo apt-get install -y shellcheck
+      - name: Run shellcheck
+        run: |
+          if [ -d ci/scripts ]; then
+            find ci/scripts -type f -name '*.sh' -print0 \
+              | xargs -0 -r shellcheck --shell=bash --severity=warning
+          fi
+
+  shell-tests:
+    name: shell tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - name: Run shell tests
+        run: |
+          if [ -x ci/scripts/tests/run.sh ]; then
+            bash ci/scripts/tests/run.sh
+          else
+            echo "ci/scripts/tests/run.sh not present yet — skipping"
+          fi
