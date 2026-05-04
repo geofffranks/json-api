@@ -1,6 +1,20 @@
-# NOTE: Starting on Apr 29, 2026, this file will no longer be updated. Please see
-  the release notes for versions of this module published on GitHub: 
-  https://github.com/geofffranks/json-api/releases
+## 1.2.0 — 2026-04-29
+
+## What's Changed
+* Add predecode hook by @tu-maurice in https://github.com/geofffranks/json-api/pull/5
+* Fix test suite, json encode/decode behaviour by disallowing nonref en… by @tehmoth in https://github.com/geofffranks/json-api/pull/6
+* Configure WhiteSource Bolt for GitHub by @mend-bolt-for-github[bot] in https://github.com/geofffranks/json-api/pull/7
+* feat: add patch method by @mat813 in https://github.com/geofffranks/json-api/pull/9
+
+## New Contributors
+* @tu-maurice made their first contribution in https://github.com/geofffranks/json-api/pull/5
+* @tehmoth made their first contribution in https://github.com/geofffranks/json-api/pull/6
+* @mend-bolt-for-github[bot] made their first contribution in https://github.com/geofffranks/json-api/pull/7
+* @mat813 made their first contribution in https://github.com/geofffranks/json-api/pull/9
+
+**Full Changelog**: https://github.com/geofffranks/json-api/compare/v1.1.0...v1.2.0
+
+# NOTE: Automated tracking resumed 2026-05-04. See https://github.com/geofffranks/json-api/releases for any older entries pre-1.2.0.
 
 # Revision history for JSON::API pre Apr 29, 2026
 
