@@ -9,15 +9,24 @@ jobs:
     name: Publish to CPAN
     runs-on: ubuntu-latest
     environment: Release
-    if: github.event_name == 'release' && github.ref_type == 'tag' && startsWith(github.ref, 'refs/tags/v')
+    if: github.event_name == 'release' && github.ref_type == 'tag' && startsWith(github.ref, 'refs/tags/')
     steps:
       - uses: actions/checkout@v6
       - name: update-version
-        # Tag is expected as vX.Y.Z so the v-string $VERSION = vX.Y.Z; stays valid.
+        # Accepts both old v-string form ($VERSION = v1.2.0;) and new
+        # quoted form ($VERSION = '1.2.0';) on the input side.
+        # Always emits the quoted form. Tag is expected as bare X.Y.Z
+        # (no 'v' prefix); old v-prefixed tags are still acceptable for
+        # backwards compatibility — the leading 'v' is stripped.
         env:
           REF_NAME: ${{ github.ref_name }}
         run: |
-          perl -i -pe 's/^(\s*)\$VERSION\s*=\s*v[0-9.]+;/$1\$VERSION = $ENV{REF_NAME};/' lib/JSON/API.pm
+          REF_NAME_BARE="${REF_NAME#v}"
+          perl -i -pe "s/^(\\s*)\\\$VERSION\\s*=\\s*['\"]?v?[0-9.]+['\"]?;/\$1\\\$VERSION = '${REF_NAME_BARE}';/" lib/JSON/API.pm
+          if ! grep -qF "\$VERSION = '${REF_NAME_BARE}';" lib/JSON/API.pm; then
+              echo "publish-cpan: failed to update \$VERSION in lib/JSON/API.pm" >&2
+              exit 1
+          fi
       - name: install cpanm and multiple modules
         uses: perl-actions/install-with-cpanm@v2
         with:
