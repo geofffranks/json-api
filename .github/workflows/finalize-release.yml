@@ -1,0 +1,99 @@
+name: finalize-release
+
+on:
+  pull_request:
+    types: [closed]
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Existing tag to (re)create the GitHub release for"
+        required: true
+        type: string
+
+concurrency:
+  group: release-finalize-${{ github.event.pull_request.number || inputs.tag }}
+  cancel-in-progress: false
+
+jobs:
+  finalize:
+    name: Finalize release
+    if: |
+      github.event_name == 'workflow_dispatch'
+      || (github.event.pull_request.merged == true && startsWith(github.event.pull_request.head.ref, 'release/'))
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: read
+    steps:
+      - name: Checkout merge commit
+        if: github.event_name == 'pull_request'
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ github.event.pull_request.merge_commit_sha }}
+          fetch-depth: 0
+
+      - name: Checkout tag (retry path)
+        if: github.event_name == 'workflow_dispatch'
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ inputs.tag }}
+          fetch-depth: 0
+
+      - name: Extract release section from Changes
+        id: extract
+        run: |
+          set -euo pipefail
+          BODY_FILE=$(mktemp)
+          VERSION=$(bash ci/scripts/extract-release-section.sh \
+              --changes-file Changes \
+              --out-file "$BODY_FILE")
+          echo "version=$VERSION"          >> "$GITHUB_OUTPUT"
+          echo "body_file=$BODY_FILE"      >> "$GITHUB_OUTPUT"
+
+      - name: Verify version matches branch (PR path)
+        if: github.event_name == 'pull_request'
+        env:
+          PR_BRANCH: ${{ github.event.pull_request.head.ref }}
+          EXTRACTED_VERSION: ${{ steps.extract.outputs.version }}
+        run: |
+          set -euo pipefail
+          BRANCH_VERSION="${PR_BRANCH#release/}"
+          if [ "$BRANCH_VERSION" != "$EXTRACTED_VERSION" ]; then
+            echo "finalize-release: branch version '$BRANCH_VERSION' does not match Changes section version '$EXTRACTED_VERSION'" >&2
+            exit 1
+          fi
+
+      - name: Verify version matches input tag (retry path)
+        if: github.event_name == 'workflow_dispatch'
+        env:
+          INPUT_TAG: ${{ inputs.tag }}
+          EXTRACTED_VERSION: ${{ steps.extract.outputs.version }}
+        run: |
+          set -euo pipefail
+          if [ "$INPUT_TAG" != "$EXTRACTED_VERSION" ]; then
+            echo "finalize-release: input tag '$INPUT_TAG' does not match Changes section version '$EXTRACTED_VERSION'" >&2
+            exit 1
+          fi
+
+      - name: Tag and push (PR path only)
+        if: github.event_name == 'pull_request'
+        env:
+          VERSION: ${{ steps.extract.outputs.version }}
+        run: |
+          set -euo pipefail
+          git config user.name  "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git tag -a "$VERSION" -m "release $VERSION"
+          git push origin "refs/tags/$VERSION"
+
+      - name: Create GitHub release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          VERSION: ${{ steps.extract.outputs.version }}
+          BODY_FILE: ${{ steps.extract.outputs.body_file }}
+        run: |
+          set -euo pipefail
+          gh release create "$VERSION" \
+              --title "$VERSION" \
+              --notes-file "$BODY_FILE"
