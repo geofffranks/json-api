@@ -1,0 +1,66 @@
+name: prepare-release
+
+on:
+  workflow_dispatch:
+    inputs:
+      bump:
+        description: "Semver part to bump (ignored if 'version' is set)"
+        required: false
+        default: minor
+        type: choice
+        options:
+          - patch
+          - minor
+          - major
+      version:
+        description: "Explicit X.Y.Z version (overrides 'bump' if non-empty)"
+        required: false
+        default: ""
+        type: string
+
+concurrency:
+  group: release-prep
+  cancel-in-progress: false
+
+jobs:
+  prepare:
+    name: Prepare release PR
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Run prepare-release
+        id: prepare
+        env:
+          BUMP: ${{ inputs.bump }}
+          VERSION_OVERRIDE: ${{ inputs.version }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: bash ci/scripts/prepare-release.sh
+
+      - name: Open release PR
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_BODY_FILE: ${{ steps.prepare.outputs.pr_body_file }}
+          PR_BRANCH: ${{ steps.prepare.outputs.branch }}
+          PR_VERSION: ${{ steps.prepare.outputs.version }}
+        run: |
+          set -euo pipefail
+          BODY_WITH_NOTE=$(mktemp)
+          cat > "$BODY_WITH_NOTE" <<'NOTE_EOF'
+          > **Reviewer note:** the `Changes` file in this PR is the source of truth for the release notes. The GitHub release body and CPAN tarball will be generated from the topmost section of `Changes` at merge time. Edits to **this PR description** will NOT be reflected in either — edit `Changes` directly if you want to amend the notes.
+
+          NOTE_EOF
+          cat "$PR_BODY_FILE" >> "$BODY_WITH_NOTE"
+
+          gh pr create \
+              --base main \
+              --head "$PR_BRANCH" \
+              --title "Release ${PR_VERSION}" \
+              --body-file "$BODY_WITH_NOTE" \
+              --label release
