@@ -78,5 +78,5 @@ Old `v*` tags (v1.2.0 and earlier) stay as historical. PAUSE/MetaCPAN treats bot
 | `prepare-release` fails with "no commits since X.Y.Z" | Nothing new to release. | Don't release. |
 | `prepare-release` fails with "Changes file has no '## X.Y.Z' heading" | `Changes` is in pre-backfill state. | Run the backfill (see Prerequisites). |
 | `prepare-release` fails with "failed to update $VERSION" | The line format in `lib/JSON/API.pm` changed and no longer matches the regex. | Update the regex in `ci/scripts/prepare-release.sh`. |
-| `finalize-release` tags but fails at `gh release create` (transient) | GitHub API hiccup. | Re-run `finalize-release` manually via `workflow_dispatch` with `tag=X.Y.Z`. |
+| `finalize-release` tags but fails at `gh release create` (transient) | GitHub API hiccup. | Re-run `finalize-release` manually via `workflow_dispatch` with `tag=X.Y.Z`. **If the failed run partially created the GitHub release (e.g. release exists but is empty/draft), delete it via `gh release delete X.Y.Z` first** — `gh release create` is not idempotent and will error on a duplicate. |
 | Version in `Changes` heading doesn't match branch name | Maintainer edited the heading line in the PR but not the branch. | Either rename the branch or fix the heading; finalize-release fails loudly to catch this. |
