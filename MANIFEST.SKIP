@@ -7,6 +7,7 @@
 ,v$
 \B\.svn\b
 \B\.git\b
+\B\.github\b
 \B\.gitignore\b
 \b_darcs\b
 \B\.cvsignore$
@@ -69,6 +70,16 @@
 \bbuild.com$
 #^MANIFEST\.SKIP
 
-# Avoid archives of this distribution
-^JSON-API-v\d+
+# ignore ci files
+^ci\b
+
+# ignore whitesource
+\B\.whitesource
+
+# Avoid archives of this distribution (accept both 'JSON-API-1.x' and 'JSON-API-v1.x')
+^JSON-API-v?\d+
 ^t/tmp
+
+# Avoid maintainer-only docs
+^RELEASING\.md
+^docs\b
