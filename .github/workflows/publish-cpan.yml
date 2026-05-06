@@ -1,17 +1,62 @@
 name: Publish to CPAN
 
 on:
-  release:
-    types: [created]
+  workflow_run:
+    workflows: [finalize-release]
+    types: [completed]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Tag to publish to CPAN"
+        required: true
+        type: string
+
+concurrency:
+  group: publish-cpan-${{ inputs.tag || github.event.workflow_run.id }}
+  cancel-in-progress: false
 
 jobs:
-  publish-ui:
+  publish:
     name: Publish to CPAN
     runs-on: ubuntu-latest
     environment: Release
-    if: github.event_name == 'release' && github.ref_type == 'tag' && startsWith(github.ref, 'refs/tags/')
+    if: |
+      github.event_name == 'workflow_dispatch'
+      || github.event.workflow_run.conclusion == 'success'
+    permissions:
+      contents: read
+      actions: read
     steps:
+      - name: Resolve tag (workflow_dispatch)
+        if: github.event_name == 'workflow_dispatch'
+        env:
+          INPUT_TAG: ${{ inputs.tag }}
+        run: |
+          set -euo pipefail
+          [ -n "$INPUT_TAG" ] || { echo "publish-cpan: empty input tag" >&2; exit 1; }
+          echo "TAG=$INPUT_TAG" >> "$GITHUB_ENV"
+
+      - name: Download release-tag artifact (workflow_run)
+        if: github.event_name == 'workflow_run'
+        uses: actions/download-artifact@v4
+        with:
+          name: release-tag
+          run-id: ${{ github.event.workflow_run.id }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          path: ${{ runner.temp }}/release-tag
+
+      - name: Resolve tag (workflow_run)
+        if: github.event_name == 'workflow_run'
+        run: |
+          set -euo pipefail
+          TAG=$(tr -d '[:space:]' < "$RUNNER_TEMP/release-tag/tag.txt")
+          [ -n "$TAG" ] || { echo "publish-cpan: empty tag artifact" >&2; exit 1; }
+          echo "TAG=$TAG" >> "$GITHUB_ENV"
+
       - uses: actions/checkout@v6
+        with:
+          ref: ${{ env.TAG }}
+
       - name: update-version
         # Accepts both old v-string form ($VERSION = v1.2.0;) and new
         # quoted form ($VERSION = '1.2.0';) on the input side.
@@ -19,7 +64,7 @@ jobs:
         # (no 'v' prefix); old v-prefixed tags are still acceptable for
         # backwards compatibility — the leading 'v' is stripped.
         env:
-          REF_NAME: ${{ github.ref_name }}
+          REF_NAME: ${{ env.TAG }}
         run: |
           REF_NAME_BARE="${REF_NAME#v}"
           perl -i -pe "s/^(\\s*)\\\$VERSION\\s*=\\s*['\"]?v?[0-9.]+['\"]?;/\$1\\\$VERSION = '${REF_NAME_BARE}';/" lib/JSON/API.pm
@@ -27,6 +72,7 @@ jobs:
               echo "publish-cpan: failed to update \$VERSION in lib/JSON/API.pm" >&2
               exit 1
           fi
+
       - name: install cpanm and multiple modules
         uses: perl-actions/install-with-cpanm@v2
         with:
@@ -41,6 +87,7 @@ jobs:
             Test::More
             Test::Pod::Coverage
             CPAN::Uploader
+
       - name: Configure
         run: perl Build.PL
       - name: Test

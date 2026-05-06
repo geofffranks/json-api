@@ -97,3 +97,22 @@ jobs:
           gh release create "$VERSION" \
               --title "$VERSION" \
               --notes-file "$BODY_FILE"
+
+      # Hand off the resolved tag to publish-cpan via workflow_run + artifact.
+      # GITHUB_TOKEN-created releases do not fire the `release` event, so
+      # publish-cpan keys off this workflow's completion instead.
+      - name: Stage release-tag artifact
+        env:
+          VERSION: ${{ steps.extract.outputs.version }}
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/release-tag"
+          printf '%s\n' "$VERSION" > "$RUNNER_TEMP/release-tag/tag.txt"
+
+      - name: Upload release-tag artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-tag
+          path: ${{ runner.temp }}/release-tag/tag.txt
+          if-no-files-found: error
+          retention-days: 1
