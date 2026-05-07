@@ -22,19 +22,19 @@ jobs:
 
     steps:
       - uses: actions/checkout@v6
+      - uses: shogo82148/actions-setup-perl@v1
       - run: perl -V
+      # Reads ALL deps (configure / runtime / test) from META.json /
+      # Build.PL. cpanm honors configure_requires automatically, so
+      # Module::Build gets pulled in before perl Build.PL runs.
+      # Single source of truth -- adding a new dep to Build.PL picks
+      # up here without a workflow edit. Test::Perl::Critic is an
+      # author-only dep used by t/author-perlcritic.t; installed
+      # explicitly so the lint test runs in CI.
       - name: install dependencies
-        uses: perl-actions/install-with-cpm@v2
-        with:
-          install: |
-            Module::Build
-            JSON
-            LWP::UserAgent
-            URI::Encode
-            Test::Fake::HTTPD
-            IO::Capture
-            Test::More
-            Test::Pod::Coverage
+        run: |
+          cpanm --installdeps --notest .
+          cpanm --notest Test::Perl::Critic Perl::Critic
       - run: perl Build.PL
       - run: ./Build
       - run: ./Build test
@@ -77,22 +77,12 @@ jobs:
     steps:
       - uses: actions/checkout@v6
       - run: perl -V
+      # perldocker/perl-tester images ship with cpanm + Module::Build
+      # preinstalled, so no bootstrap step needed. Same `cpanm
+      # --installdeps` pattern as the ubuntu job; reads Build.PL
+      # directly. Avoids dep-list duplication between workflow + Build.PL.
       - name: install dependencies
-        # cpanm rather than cpm here: cpm's bootstrap script needs Perl
-        # >= 5.24 and would refuse to run on the older matrix entries.
-        uses: perl-actions/install-with-cpanm@v2
-        with:
-          # perldocker container runs as root and ships no sudo binary
-          sudo: false
-          install: |
-            Module::Build
-            JSON
-            LWP::UserAgent
-            URI::Encode
-            Test::Fake::HTTPD
-            IO::Capture
-            Test::More
-            Test::Pod::Coverage
+        run: cpanm --installdeps --notest .
       - run: perl Build.PL
       - run: ./Build
       - run: ./Build test

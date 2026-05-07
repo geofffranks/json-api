@@ -2,7 +2,23 @@ use strict;
 use warnings;
 use Module::Build;
 
-my $builder = Module::Build->new(
+# Subclass to add a `./Build critic` action that runs Perl::Critic
+# against lib/ and t/ at the project's --gentle severity. Same check
+# as the author-mode test in t/author-perlcritic.t -- this just lets
+# you invoke it standalone without running the full test suite.
+my $class = Module::Build->subclass(
+	class => 'JSON::API::Builder',
+	code => <<'CRITIC_ACTION',
+sub ACTION_critic {
+	my $self = shift;
+	require Test::Perl::Critic;
+	Test::Perl::Critic->import(-severity => 'gentle');
+	Test::Perl::Critic::all_critic_ok('lib', 't');
+}
+CRITIC_ACTION
+);
+
+my $builder = $class->new(
 	module_name         => 'JSON::API',
 	create_license      => 1,
 	license             => 'perl',
